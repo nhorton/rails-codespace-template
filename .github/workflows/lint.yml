@@ -1,0 +1,51 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  rubocop:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3
+        bundler-cache: true
+
+    - name: Run RuboCop
+      run: |
+        if bundle show rubocop > /dev/null 2>&1; then
+          bundle exec rubocop --parallel
+        else
+          echo "RuboCop not found in Gemfile - skipping lint"
+        fi
+
+  erblint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3
+        bundler-cache: true
+
+    - name: Run ERB Lint
+      run: |
+        if bundle show erb_lint > /dev/null 2>&1; then
+          bundle exec erblint --lint-all
+        else
+          echo "ERB Lint not found in Gemfile - skipping ERB lint"
+        fi

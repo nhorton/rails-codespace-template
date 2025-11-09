@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3
+        bundler-cache: true
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'yarn'
+
+    - name: Install dependencies
+      run: |
+        bundle install --jobs 4 --retry 3
+        yarn install --frozen-lockfile
+
+    - name: Setup database
+      run: |
+        if [ -f "bin/rails" ]; then
+          bin/rails db:create db:schema:load
+        fi
+
+    - name: Run tests
+      run: |
+        if [ -f "bin/rspec" ]; then
+          bundle exec rspec
+        elif [ -f "bin/rails" ]; then
+          bin/rails test
+        else
+          echo "No tests found - skipping test execution"
+        fi
+
+    - name: Run system tests
+      run: |
+        if [ -f "bin/rspec" ] && [ -d "spec/system" ]; then
+          bundle exec rspec spec/system
+        fi
